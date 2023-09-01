@@ -62,14 +62,15 @@ for i = 1:numero_Simbolos
     secuencia_simbolos_rect(i) = Simbolos(posicion);
 end
 % Grafica de constelacion usando la secuencia de simbolos rectangulares
-scatterplot(secuencia_simbolos_rect)
+scatterplot(secuencia_simbolos_rect);
 title('Diagrama de Constelación 8PSK secuencia');
 xlabel('Parte Real');
 ylabel('Parte Imaginaria');
 axis square;
 grid on;
+
 % Grafica constelación de símbolos
-simbolo_const = exp(1i * pi/4 * (1:8))
+simbolo_const = exp(1i * pi/4 * (1:8));
 scatterplot(simbolo_const);
 title('Diagrama de Constelación 8PSK');
 xlabel('Parte Real');
@@ -77,21 +78,36 @@ ylabel('Parte Imaginaria');
 axis square;
 grid on;
 
-%disp(Simbolos_rect);
-
-% Visualiza
-% figure(4),
-% plot(t, secuencia);
-% xlabel('Tiempo SEÑAL BITS');
-% ylabel('Valor');
-%
-% figure(5),
-% plot(t, modulada, 'b');
-% xlabel('Tiempo');
-% ylabel('Amplitud modulada');
-
-% Configuración de los ejes para una mejor visualización
-%axis([0 t(end) -1.5 1.5]);
-
-
 %% PULSO CONFORMADOR
+% Parámetros del pulso conformador
+alfa = 0.5; %factor de roll-off
+span = 1; %numero de simbolos
+mps = 10; %muestras por simbolos
+
+% Pulso conformador 
+pulso = rcosdesign(alfa, span, mps, 'sqrt');
+
+%sobremuestreo
+
+secuencia_Sobremuestreada = upsample(secuencia_Simbolos, mps+1);
+
+% conrmar pulsos
+pulsos_conformados = filter(pulso,1,secuencia_Sobremuestreada);
+
+% Graficar el pulso conformador
+figure;
+stem(pulso);
+title('Pulso');
+xlabel('Muestras');
+ylabel('Amplitud');
+
+figure;
+plot(real(pulsos_conformados));
+
+
+
+
+
+
+
+
