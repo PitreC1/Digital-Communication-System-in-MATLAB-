@@ -167,17 +167,16 @@ grid on;
 %% Modulacion Pasa Banda FSK
 % Parámetros para la modulación FSK
 f1 = 1000; % Frecuencia para la primera portadora (Hz)
-f2 = 500; % Frecuencia para la segunda portadora (Hz)se tendra cuando la señal baja a cero
-fs_fsk= 10*f1;% Tasa de muestreo 
+f2 = 500; % Frecuencia para la segunda portadora (Hz)
+fs_fsk= 2*f1;% frecuencia de muestreo
 
 % Vector de tiempo para la señal FSK
 t_fsk = 0:(1/fs_fsk):(length(pulsos_conformados) * Tb - 1/fs_fsk)/(fs_fsk); % Vector de tiempo FSK  
 w_fsk = 2*pi*f1;
 % Portadora F1
-portadora1_fsk = cos(w_fsk* t_fsk);
-
-% Portadora F2
-portadora2_fsk = cos(2*pi*f2* t_fsk);
+portadora1_fsk = cos(w_fsk* t);
+% Portadora
+portadora2_fsk = cos(w_fsk* t);
 
 % Moduladora
 moduladora_fsk = pulsos_conformados;
@@ -197,28 +196,28 @@ end
 % Graficas Modulacion FSK 
 
 % Grafica portadora f1
-subplot(3,2,1)
-plot(t_fsk, portadora1_fsk);
+subplot(3,1,1)
+plot(t_fsk, portadora_fsk);
 title('Señal portadora F1');
 xlabel('Tiempo (s)');
 ylabel('Amplitud');
 grid on; 
-% Grafica portadora f2
-subplot(3,2,2)
-plot(t_fsk, portadora2_fsk);
+% Grafica portadora f1
+subplot(3,2,1)
+plot(t_fsk, portadora_fsk);
 title('Señal portadora F2');
 xlabel('Tiempo (s)');
 ylabel('Amplitud');
 grid on; 
 % Grafica señal moduladora
-subplot(3,2,[3,4])
+subplot(3,1,2)
 plot(t_fsk, moduladora_fsk);
 title('Señal moduladora');
 xlabel('Tiempo (s)');
 ylabel('Amplitud');
 grid on; 
 % Grafica señal modulada FSK
-subplot(3,2,[5,6])
+subplot(3,1,3)
 plot(t_fsk, senal_modulada_fsk);
 title('Señal Modulada FSK (Frecuencia Variable)');
 xlabel('Tiempo (s)');
