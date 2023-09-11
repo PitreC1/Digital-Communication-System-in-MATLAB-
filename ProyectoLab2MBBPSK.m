@@ -57,12 +57,8 @@ end
 
 %Transformacion a secuencia de simbolos rectangulares
 secuencia_simbolos_rect = Simbolos(secuencia_Simbolos); 
-
-% secuencia_simbolos_rect= zeros(1,numero_Simbolos);
-% for i = 1:numero_Simbolos
-%     posicion = secuencia_Simbolos(i);
-%     secuencia_simbolos_rect(i) = Simbolos(posicion); % Secuencia simbolos rect
-% end
+secuencia_simbolos_real= real(secuencia_simbolos_rect);
+secuecia_simbolos_img= imag(secuencia_simbolos_rect);
 
 % Grafica de constelacion usando la secuencia de simbolos rectangulares
 scatterplot(secuencia_simbolos_rect);
@@ -75,22 +71,21 @@ grid on;
 %% PULSO CONFORMADOR
 % Parámetros del pulso conformador
 alfa = 0.5; %factor de roll-off
-span = 6; %numero de simbolos
-mps = 8; %muestras por simbolos
+span = 1; %numero de simbolos
+mps = 2; %muestras por simbolos
 
 % Pulso conformador 
 pulso = rcosdesign(alfa, span, mps, 'sqrt');
 
 %sobremuestreo
-secuencia_Sobremuestreada = upsample(secuencia_Simbolos, mps);% quitar +1
-
+secuencia_Sobremuestreada_r = upsample(secuencia_simbolos_real, mps+1);
+secuencia_Sobremuestreada_i = upsample(secuecia_simbolos_img, mps+1);
 % conformar pulsos
-%pulsos_conformados = filter(pulso,1,secuencia_Sobremuestreada);
-pulsos_conformados = conv(secuencia_Sobremuestreada, pulso);
-
+pulsos_conf_real = conv(secuencia_Sobremuestreada_r, pulso);
+pulsos_conf_img = conv(secuencia_Sobremuestreada_i, pulso);
 
 % Graficas
-figure;
+figure(4),
 subplot(3,1,1)
 stem(pulso);
 title('Pulsos Conformador');
@@ -98,140 +93,66 @@ xlabel('Muestras');
 ylabel('Amplitud');
 
 subplot(3,1,2)
-stem(secuencia_Sobremuestreada)
-title('Secuencia sobremuestreada');
+stem(secuencia_Sobremuestreada_r)
+title('Secuencia sobremuestreada real');
 xlabel('Muestras');
+xlim([0,33]);
 ylabel('Amplitud');
 
 subplot(3,1,3)
-stem(pulsos_conformados);
-title('Señal Pulsos conformados');
+stem(pulsos_conf_real);
+title('Señal Pulsos conformados reales');
+xlabel('Muestras');
+xlim([0,33]);
+ylabel('Amplitud');
+
+% Graficas
+figure(5),
+subplot(3,1,1)
+stem(pulso);
+title('Pulsos Conformador');
 xlabel('Muestras');
 ylabel('Amplitud');
-
-
-%% Modulacion Pasa Banda  ASK
-% Parámetros:
-frp = 1000; % Frecuencia de la portadora 
-Ap = 4; % Amplitud portadora
-Tb = 1; % Duración de un bit en segundos
-
-% Vector de tiempo
-fs = 100 * frp; % Tasa de muestreo (debe ser mayor que el doble de la frecuencia de la portadora)
-t = 0:(1/fs):(length(pulsos_conformados) * Tb - 1/fs)/fs; % Vector de tiempo
-
-% Frecuencia de la portadora en radianes por segundo
-w = 2 * pi * frp;
-
-% Portadora
-portadora = Ap * cos(w * t);
-
-% Moduladora
-moduladora=pulsos_conformados;
-
-% Modulación en pasa banda 
-ask=(1+(Ap*moduladora)).*(cos(w*t));
-
-% Gráfica de la señal 
-subplot(3,1,1)
-plot(t, portadora);
-title('Señal portadora');
-xlabel('Tiempo (s)');
-ylabel('Amplitud');
-grid on; 
 
 subplot(3,1,2)
-plot(t, moduladora);
-title('Señal moduladora');
-xlabel('Tiempo (s)');
+stem(secuencia_Sobremuestreada_i)
+title('Secuencia sobremuestreada imaginaria');
+xlabel('Muestras');
+xlim([0,33]);
 ylabel('Amplitud');
-grid on; 
 
 subplot(3,1,3)
-plot(t, ask);
-title('Señal Modulada');
-xlabel('Tiempo (s)');
+stem(pulsos_conf_img);
+title('Señal Pulsos conformados imaginarios');
+xlabel('Muestras');
+xlim([0,33]);
 ylabel('Amplitud');
-grid on; 
 
-% Espectro de la señal:
-figure;
-fsenal = abs(fft(ask));
-f = linspace(0, frp, length(fsenal));
-plot(f, fsenal);
-title('Espectro de la Señal Modulada en Banda Pasante');
-xlabel('Frecuencia (Hz)');
-ylabel('Amplitud');
-grid on; 
-
-%% Modulacion Pasa Banda FSK
-% Parámetros para la modulación FSK
-f1 = 1000; % Frecuencia para la primera portadora (Hz)
-f2 = 500; % Frecuencia para la segunda portadora (Hz)se tendra cuando la señal baja a cero
-fs_fsk= 10*f1;% Tasa de muestreo 
-
-% Vector de tiempo para la señal FSK
-t_fsk = 0:(1/fs_fsk):(length(pulsos_conformados) * Tb - 1/fs_fsk)/(fs_fsk); % Vector de tiempo FSK  
-w_fsk = 2*pi*f1;
-% Portadora F1
-portadora1_fsk = cos(w_fsk* t_fsk);
-
-% Portadora F2
-portadora2_fsk = cos(2*pi*f2* t_fsk);
-
+%% Modulacion Pasa Banda 
+Rs=10;
+fs=mps*Rs;
+ts=1/fs;
+Tb=1;
+fc=2*Rs;
+t = 0:ts:(length(pulsos_conf_real)*Tb - 1/fc)/fs;
 % Moduladora
-moduladora_fsk = pulsos_conformados;
+moduladora_PB=pulsos_conf_real;
+senal_real=sqrt(2)*pulsos_conf_img.*cos(2*pi*fc.*t);
+senal_img=sqrt(2)*pulsos_conf_img.*sin(2*pi*fc.*t);
+senal_tx=senal_real - senal_img; %Señal a transmitir
 
-% Generación de la señal FSK
-senal_modulada_fsk = zeros(1, length(t_fsk)); % Inicializa la señal FSK
-
-% Modula la señal de acuerdo a la secuencia de pulsos conformados
-for i = 1:length(pulsos_conformados)
-    if pulsos_conformados(i) > 2
-        senal_modulada_fsk(i) = cos(2 * pi * f1 * t_fsk(i));
-    else
-          senal_modulada_fsk(i) = cos(2 * pi * f2 * t_fsk(i));
-    end
-end
-
-% Graficas Modulacion FSK 
-
-% Grafica portadora f1
-subplot(3,2,1)
-plot(t_fsk, portadora1_fsk);
-title('Señal portadora F1');
+%Graficas
+figure(7),
+plot(t, moduladora_PB);
+title('Señal a transmitir');
 xlabel('Tiempo (s)');
+xlim([0,33]);
 ylabel('Amplitud');
 grid on; 
-% Grafica portadora f2
-subplot(3,2,2)
-plot(t_fsk, portadora2_fsk);
-title('Señal portadora F2');
+figure(8),
+plot(t, senal_tx);
+title('Señal a transmitir');
 xlabel('Tiempo (s)');
+xlim([0,33]);
 ylabel('Amplitud');
 grid on; 
-% Grafica señal moduladora
-subplot(3,2,[3,4])
-plot(t_fsk, moduladora_fsk);
-title('Señal moduladora');
-xlabel('Tiempo (s)');
-ylabel('Amplitud');
-grid on; 
-% Grafica señal modulada FSK
-subplot(3,2,[5,6])
-plot(t_fsk, senal_modulada_fsk);
-title('Señal Modulada FSK (Frecuencia Variable)');
-xlabel('Tiempo (s)');
-ylabel('Amplitud');
-grid on;
-
-
-
-
-
-
-
-
-
-
-
