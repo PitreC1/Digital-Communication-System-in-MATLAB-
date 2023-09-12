@@ -3,65 +3,46 @@ img=imread("panda3.jpg");
 
 %Imagen original en escala de grises
 img_Gray =  rgb2gray(img);
-figure(1),imshow(img_Gray);
-title('imagen original ');
-colorbar;
 
 %Imagen Binarizada
 level=graythresh(img_Gray);
 img_Binaria=im2bw(img_Gray,level);
-figure(2),imshow(img_Binaria);
 
 %Secuencia de bits de la imagen
 secuencia = reshape(img_Binaria, 1, []);
 
+%Graficas Fuente
+figure(1),
+imshow(img_Gray);
+title('Imagen en escala de grises ');
+colorbar;
+
+figure(2),
+imshow(img_Binaria);
+title('Imagen Binarizada ');
 
 %% MODULACION EN BANDA BASE 8PSK
-
-% Se define el alfabeto
-alfabeto = [
-    0,0,0;% S1
-    0,0,1;% S2
-    0,1,0;% S3
-    0,1,1;% S4
-    1,0,0;% S5
-    1,0,1;% S6
-    1,1,0;% S7
-    1,1,1;]; % S8
-% Se define los simbolos en forma rectangular 
-Simbolos = [-0.707 - 0.707j;
-    -1 + 0j;
-    0 + 1j;
-    -0.707 + 0.707j;
-    0 - 1j;
-    0.707 - 0.707j;
-    +0.707 + 0.707j;
-    1 + 0j];
 
 % Transformacion de la secuencia de bits a secuencia de simbolos de S1 a S8
 grupo = 3;
 numero_Simbolos = numel(secuencia) / grupo;
 secuencia_Simbolos = zeros(1, numero_Simbolos); 
+
 for i = 1:numero_Simbolos
     indiceInicio = (i - 1) * grupo + 1;
     indiceFin = indiceInicio + grupo - 1;
     grupoBits = secuencia(indiceInicio:indiceFin);
 
-    for j = 1:size(alfabeto, 1)
-        if isequal(grupoBits, alfabeto(j, :))
-            secuencia_Simbolos(i) = j; %Vector de simbolos 
-            break;
-        end
-    end
+    secuencia_Simbolos(i) = mapeo_Simbolos(grupoBits);
 end
 
 %Transformacion a secuencia de simbolos rectangulares
-secuencia_simbolos_rect = Simbolos(secuencia_Simbolos); 
-secuencia_simbolos_real= real(secuencia_simbolos_rect);
-secuecia_simbolos_img= imag(secuencia_simbolos_rect);
+
+secuencia_simbolos_real= real(secuencia_Simbolos);
+secuecia_simbolos_img= imag(secuencia_Simbolos);
 
 % Grafica de constelacion usando la secuencia de simbolos rectangulares
-scatterplot(secuencia_simbolos_rect);
+scatterplot(secuencia_Simbolos);
 title('Diagrama de Constelación 8PSK');
 xlabel('Parte Real');
 ylabel('Parte Imaginaria');
@@ -72,7 +53,7 @@ grid on;
 % Parámetros del pulso conformador
 alfa = 0.5; %factor de roll-off
 span = 1; %numero de simbolos
-mps = 2; %muestras por simbolos
+mps = 6; %muestras por simbolos
 
 % Pulso conformador 
 pulso = rcosdesign(alfa, span, mps, 'sqrt');
@@ -84,7 +65,7 @@ secuencia_Sobremuestreada_i = upsample(secuecia_simbolos_img, mps+1);
 pulsos_conf_real = conv(secuencia_Sobremuestreada_r, pulso);
 pulsos_conf_img = conv(secuencia_Sobremuestreada_i, pulso);
 
-% Graficas
+% Grafica Pulso conformador
 figure(4),
 subplot(3,1,1)
 stem(pulso);
@@ -134,25 +115,54 @@ fs=mps*Rs;
 ts=1/fs;
 Tb=1;
 fc=2*Rs;
+
 t = 0:ts:(length(pulsos_conf_real)*Tb - 1/fc)/fs;
+
 % Moduladora
 moduladora_PB=pulsos_conf_real;
-senal_real=sqrt(2)*pulsos_conf_img.*cos(2*pi*fc.*t);
+
+%Señal Pasa Banda 
+senal_real=sqrt(2)*pulsos_conf_real.*cos(2*pi*fc.*t);
 senal_img=sqrt(2)*pulsos_conf_img.*sin(2*pi*fc.*t);
 senal_tx=senal_real - senal_img; %Señal a transmitir
 
-%Graficas
-figure(7),
-plot(t, moduladora_PB);
-title('Señal a transmitir');
-xlabel('Tiempo (s)');
-xlim([0,33]);
-ylabel('Amplitud');
-grid on; 
-figure(8),
+
+%Grafica Modulacion Pasa Banda
+figure(6),
 plot(t, senal_tx);
-title('Señal a transmitir');
+title('Señal a Transmitir');
 xlabel('Tiempo (s)');
-xlim([0,33]);
+xlim([0,10]);
 ylabel('Amplitud');
 grid on; 
+
+%% Funciones, etc
+
+function mapeo = mapeo_Simbolos(grupo_Bits)
+    
+    % Define un diccionario (matriz de celdas) para mapear los grupos de bits a valores
+    diccionario_8PSK = {
+    '000', 1 + 0j;     % S1
+    '001', 0.707 + 0.707j;  % S2
+    '010', 0 + 1j;     % S3
+    '011', -0.707 + 0.707j;  % S4
+    '100', -1 + 0j;     % S5
+    '101', -0.707 - 0.707j; % S6
+    '110', 0 - 1j;     % S7
+    '111', 0.707 - 0.707j; % S8
+    };
+
+
+    % Convierte el grupo_Bits a una cadena
+    grupo_Bits_str = sprintf('%d', grupo_Bits);
+
+    % Busca el valor correspondiente en el diccionario
+    index = find(strcmp(diccionario_8PSK(:,1), grupo_Bits_str));
+    
+    if ~isempty(index)
+        mapeo = diccionario_8PSK{index, 2};
+    else
+        error('Grupo de bits no válido');
+    end
+end
+
