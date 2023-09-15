@@ -1,6 +1,8 @@
-function mapeo = mapeo_Simbolos(grupo_Bits)
+function [mapeo, Es] = mapeo_Simbolos(grupo_Bits)
     
     % Define un diccionario (matriz de celdas) para mapear los grupos de bits a valores
+
+
     diccionario = {
         '0000', -3 + 3i;
         '0001', -1 + 3i;
@@ -32,4 +34,10 @@ function mapeo = mapeo_Simbolos(grupo_Bits)
         % En caso de que el grupo de bits no exista en el diccionario, puedes asignar un valor predeterminado o manejar el error según tus necesidades
         error('Grupo de bits no válido');
     end
+
+    % Cálculo de la energía del símbolo
+    A = cell2mat(diccionario(:,2));  % Extrae los valores complejos de la constelación
+    Es = sum(abs(A).^2) / numel(A);  % Calcula la energía del símbolo
+
+
 end
