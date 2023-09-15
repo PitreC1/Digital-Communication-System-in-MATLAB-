@@ -26,6 +26,17 @@ figure(2),
 imshow(img_Binaria);
 title('Imagen Binarizada ');
 
+%% %% ESPECTRO DE LA SEÑAL A TRANSMITIR
+
+fs = 2*5*10^4;
+senial = 2 * secuencia - 1;
+[X,f] = FourierT(secuencia,fs);
+figure(3)
+plot(f, X);
+xlabel('Frecuencia (Hz)');
+ylabel('Amplitud');
+title('Espectro de la señal a transmitir');
+
 %% MODULACION EN BANDA BASE 8PSK
 
 % Transformacion de la secuencia de bits a secuencia de simbolos de S1 a S8
@@ -54,16 +65,16 @@ ylabel('Parte Imaginaria');
 axis square;
 grid on;
 
-%% ESPECTRO DE LA SEÑAL A TRANSMITIR
+%% ESPECTRO DE LA SEÑAL A TRANSMITIR EN BANDA BASE 
 
 fs = 2*5*10^4;
-senial = 2 * secuencia - 1;
+%senial = 2 * secuencia - 1;
 [X,f] = FourierT(secuencia_Simbolos,fs);
-figure(4)
+figure(5)
 plot(f, X);
 xlabel('Frecuencia (Hz)');
 ylabel('Amplitud');
-title('Espectro de la señal a transmitir');
+title('Espectro de la señal Modulada en Banda Base');
 
 %% PULSO CONFORMADOR
 % Parámetros del pulso conformador
@@ -85,7 +96,7 @@ pulsos_conf_img = conv(secuencia_Sobremuestreada_i, pulso);
 pulsos_conformados = conv(secuencia_Sobremuestreada, pulso);
 
 % Grafica Pulso conformador
-figure(5),
+figure(6),
 subplot(3,1,1)
 stem(pulso);
 title('Pulsos Conformador');
@@ -107,7 +118,7 @@ xlim([0,33]);
 ylabel('Amplitud');
 
 % Graficas
-figure(6),
+figure(7),
 subplot(3,1,1)
 stem(pulso);
 title('Pulsos Conformador');
@@ -132,7 +143,7 @@ ylabel('Amplitud');
 
 fs = (2*10^4)/3;
 [XmBB,f] = FourierT(pulsos_conformados,fs);
-figure(7)
+figure(8)
 plot(f, XmBB);
 xlabel('Frecuencia (Hz)');
 ylabel('Amplitud');
@@ -157,7 +168,7 @@ senal_tx=senal_real - senal_img; %Señal a transmitir
 
 
 %Grafica Modulacion Pasa Banda
-figure(8),
+figure(9),
 plot(t, senal_tx);
 title('Señal a Transmitir');
 xlabel('Tiempo (s)');
@@ -170,7 +181,7 @@ grid on;
 
 % fs = (5*10^4)/3;
 [XmBB,f] = FourierT(senal_tx,fs);
-figure(9)
+figure(10)
 plot(f, XmBB);
 xlabel('Frecuencia (Hz)');
 ylabel('Amplitud');
