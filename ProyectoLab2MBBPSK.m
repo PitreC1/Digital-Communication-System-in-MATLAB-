@@ -21,6 +21,22 @@ figure(2),
 imshow(img_Binaria);
 title('Imagen Binarizada ');
 
+% Grafica señal a transmitir en el Dominio del Tiempo
+figure(3)
+plot(secuencia,'linewidth',2),grid on;
+title('Señal en el dominio el tiempo');
+ylim([-0.2,1.2]);
+xlim([0,4*10^3])
+
+% Espectro señal a transmitir
+figure(4)
+fs = 2*5*10^4;
+[X,f] = FourierT(secuencia,fs);
+plot(f, X);
+xlabel('Frecuencia (Hz)');
+ylabel('Amplitud');
+title('Espectro de la señal');
+
 %% MODULACION EN BANDA BASE 8PSK
 
 % Transformacion de la secuencia de bits a secuencia de simbolos de S1 a S8
@@ -37,7 +53,6 @@ for i = 1:numero_Simbolos
 end
 
 %Transformacion a secuencia de simbolos rectangulares
-
 secuencia_simbolos_real= real(secuencia_Simbolos);
 secuecia_simbolos_img= imag(secuencia_Simbolos);
 
@@ -49,6 +64,15 @@ ylabel('Parte Imaginaria');
 axis square;
 grid on;
 
+% Espectro Señal Modulada en Banda Base
+figure(5)
+fs = (5*10^4)/3;
+[X,f] = FourierT(secuencia_Simbolos,fs);
+figure(5)
+plot(f, X);
+xlabel('Frecuencia (Hz)');
+ylabel('Amplitud');
+title('Espectro de la señal en Banda Base');
 %% PULSO CONFORMADOR
 % Parámetros del pulso conformador
 alfa = 0.5; %factor de roll-off
@@ -61,12 +85,14 @@ pulso = rcosdesign(alfa, span, mps, 'sqrt');
 %sobremuestreo
 secuencia_Sobremuestreada_r = upsample(secuencia_simbolos_real, mps+1);
 secuencia_Sobremuestreada_i = upsample(secuecia_simbolos_img, mps+1);
+secuencia_Sobremuestreada = upsample(secuencia_Simbolos, mps+1);
 % conformar pulsos
 pulsos_conf_real = conv(secuencia_Sobremuestreada_r, pulso);
 pulsos_conf_img = conv(secuencia_Sobremuestreada_i, pulso);
+pulsos_conformados = conv(secuencia_Sobremuestreada, pulso);
 
-% Grafica Pulso conformador
-figure(4),
+% Grafica Pulso conformador parte real
+figure(6),
 subplot(3,1,1)
 stem(pulso);
 title('Pulsos Conformador');
@@ -87,8 +113,8 @@ xlabel('Muestras');
 xlim([0,33]);
 ylabel('Amplitud');
 
-% Graficas
-figure(5),
+% Grafica Pulso conformador parte imaginaria
+figure(7),
 subplot(3,1,1)
 stem(pulso);
 title('Pulsos Conformador');
@@ -104,17 +130,26 @@ ylabel('Amplitud');
 
 subplot(3,1,3)
 stem(pulsos_conf_img);
-title('Señal Pulsos conformados imaginarios');
+title('Señal Pulsos conformados imaginaria');
 xlabel('Muestras');
 xlim([0,33]);
 ylabel('Amplitud');
+
+%Grafica del espectro de la señal de salida del pulso conformador 
+[X,f] = FourierT(pulsos_conformados,fs);
+figure(8)
+plot(f, X);
+xlabel('Frecuencia (Hz)');
+ylabel('Amplitud');
+title('Espectro de la señal Modulada a la salida el Pulso conformador');
+
 
 %% Modulacion Pasa Banda 
 Rs=10;
 fs=mps*Rs;
 ts=1/fs;
 Tb=1;
-fc=2*Rs;
+fc=5*Rs;
 
 t = 0:ts:(length(pulsos_conf_real)*Tb - 1/fc)/fs;
 
@@ -128,13 +163,21 @@ senal_tx=senal_real - senal_img; %Señal a transmitir
 
 
 %Grafica Modulacion Pasa Banda
-figure(6),
+figure(9),
 plot(t, senal_tx);
 title('Señal a Transmitir');
 xlabel('Tiempo (s)');
 xlim([0,10]);
 ylabel('Amplitud');
 grid on; 
+
+%Espectro de la señal modulada en pasa banda
+[X,f] = FourierT(senal_tx,fs);
+figure(10)
+plot(f, X);
+xlabel('Frecuencia (Hz)');
+ylabel('Amplitud');
+title('Espectro de la señal Modulada en Pasa Banda');
 
 %% Funciones, etc
 
@@ -152,7 +195,6 @@ function mapeo = mapeo_Simbolos(grupo_Bits)
     '111', 0.707 - 0.707j; % S8
     };
 
-
     % Convierte el grupo_Bits a una cadena
     grupo_Bits_str = sprintf('%d', grupo_Bits);
 
@@ -164,5 +206,17 @@ function mapeo = mapeo_Simbolos(grupo_Bits)
     else
         error('Grupo de bits no válido');
     end
+end
+
+% Funcion para determinar el Espectro
+
+function [X,f] = FourierT(x,fs)
+
+    %t = (0:(length(x)-1)) / fs;
+    senal = 2 * x - 1;
+    X = fft(senal);
+    X = fftshift(X);
+    X = abs(X);
+    f = (-length(x)/2:length(x)/2-1) * fs / length(x);
 end
 
