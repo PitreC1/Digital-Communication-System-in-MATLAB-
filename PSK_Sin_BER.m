@@ -1,6 +1,7 @@
 
 close all
 clear all
+
 %% FUENTE BINARIA
 img=imread("panda3.jpg");
 
@@ -33,6 +34,7 @@ figure(3)
 plot(f, X);
 xlabel('Frecuencia (Hz)');
 ylabel('Amplitud');
+xlim([-20000,20000]);
 title('Espectro de la señal a transmitir');
 
 %% MODULACION EN BANDA BASE 8PSK
@@ -73,6 +75,7 @@ figure(5)
 plot(f, X);
 xlabel('Frecuencia (Hz)');
 ylabel('Amplitud');
+xlim([-20000,20000]);
 title('Espectro de la señal Modulada en Banda Base');
 
 %% PULSO CONFORMADOR
@@ -138,13 +141,15 @@ xlabel('Muestras');
 xlim([0,33]);
 ylabel('Amplitud');
 
-%ESPECTRO DE LA SEÑAL A LA SALIDA DEL PULSO CONFORMADOR
+
+% ESPECTRO DE LA SEÑAL A LA SALIDA DEL PULSO CONFORMADOR
 
 fs = (2*10^4)/3;
 [XmBB,f] = FourierT(pulsos_conformados,fs);
 figure(8)
 plot(f, XmBB);
 xlabel('Frecuencia (Hz)');
+xlim([-2000,2000]);
 ylabel('Amplitud');
 title('Espectro de la señal Modulada en Banda Base');
 
@@ -175,7 +180,7 @@ xlim([0,10]);
 ylabel('Amplitud');
 grid on; 
 
-%ESPECTRO DE LA SEÑAL MODULADA EN PASA BANDA 
+% ESPECTRO DE LA SEÑAL MODULADA EN PASA BANDA 
 
 % fs = (5*10^4)/3;
 [XmBB,f] = FourierT(senal_tx,fs);
@@ -185,27 +190,102 @@ xlabel('Frecuencia (Hz)');
 ylabel('Amplitud');
 title('Espectro de la señal Modulada en Pasa Banda');
 
-%% Canal AWGN
+%% CANAL AWGN
 
 M=8; %Orden de Modulación
-ebno=1000000; %EbNo en veces
+ebno=100000; %EbNo en veces
 
 sigma=sqrt(Energia/(2*log2(M)*ebno));%determina la varianza de ruido
 Z=sigma*randn(1,length(senal_tx));
 Y=senal_tx+Z;
-figure,
-subplot(211),plot(senal_tx,'k'),grid on, title('Señal Modulada'),xlim([mps*50 mps*100])
-subplot(212),plot(Y,'g'),grid on, title('Señal a la salida del canal'),xlim([mps*50 mps*100])
+figure(11),
+subplot(211),plot(senal_tx),grid on, title('Señal Modulada'),xlim([mps*50 mps*200])
+subplot(212),plot(Y,'b'),grid on, title('Señal a través de canal AWGN'),xlim([mps*50 mps*200])
+
+%DIAGRAMA DE CONSTELACION
+Y_Real = senal_real+Z*300;
+Y_Img = (senal_img+Z*300);
+Y_simbolos = Y_Real - j.* Y_Img;
+scatterplot(Y_simbolos);
+title('Diagrama de Constelación Despues del Canal AWGN');
+xlabel('Parte Real');
+ylabel('Parte Imaginaria');
+axis square;
+grid on;
+
+%% MUTITRAYECTORIA
+
+alpha1 = 0.1; % Constante de escala
+t1 = 1; % Desplazamiento en el tiempo (segundos)
+
+Y_Multitrayecto_1 = alpha1*interp1(t, Y, t - t1, 'linear', 0); % Interpolación lineal
+
+figure(13);
+subplot(2,1,1);
+plot(Y);
+xlim([mps*50 mps*300]);
+title('Señal Original x(t)');
+xlim([0,800]);
+xlabel('Tiempo (s)');
+ylabel('Amplitud');
+
+subplot(2,1,2);
+plot(Y_Multitrayecto_1,'r');
+xlim([mps*50 mps*300]);
+title('Señal Trayecto 1');
+xlabel('Tiempo (s)');
+ylabel('Amplitud');
+xlim([0,800]);
+
+Y_Canal = Y + Y_Multitrayecto_1;
+
+figure(14)
+plot(Y_Canal)
+xlim([mps*50 mps*200])
+title('Señal a la Salida del Canal');
+
+% ESPECTRO DE LA SEÑAL A LA SALIDA DEL CANAL 
+[YAWGNM,f] = FourierT(Y_Canal,fs);
+figure(16)
+plot(f, YAWGNM);
+xlabel('Frecuencia (Hz)');
+ylabel('Amplitud');
+title('Espectro de la señal a la Salida del Canal');
+
+%% Ecualizador
+
+Y_Ecualizado1 = (Y_Canal) - (alpha1*interp1(t, Y_Canal, t - t1, 'linear', 0)+(alpha1^2)*interp1(t, Y_Canal, t - 2*t1, 'linear', 0));
+Y_Ecualizado2 = Y_Ecualizado1 + (alpha1^2)*interp1(t, Y_Canal, t - 2*t1, 'linear', 0)+(alpha1^3)*interp1(t, Y_Canal, t - 3*t1, 'linear', 0);
+
+figure(17)
+subplot(2,1,1);
+plot(Y)
+xlim([mps*50 mps*100])
+title('Señal con AWGN');
+subplot(2,1,2);
+plot(Y_Ecualizado2)
+xlim([mps*50 mps*100])
+title('Señal Ecualizada');
 
 %% Demodulacion Pasa Banda
-senal_Y1 = sqrt(2)*Y.*cos(2*pi*fc.*t);
-senal_Y2 = -sqrt(2)*Y.*sin(2*pi*fc.*t);
+senal_Y1 = sqrt(2)*Y_Ecualizado2.*cos(2*pi*fc.*t);
+senal_Y2 = -sqrt(2)*Y_Ecualizado2.*sin(2*pi*fc.*t);
+senal_YDM = senal_Y1 + senal_Y2;
+
+% ESPECTRO DE LA SEÑAL DEMODULADA 
+[YDM,f] = FourierT(senal_YDM,fs);
+figure(18)
+plot(f, YDM);
+xlabel('Frecuencia (Hz)');
+ylabel('Amplitud');
+title('Espectro de la señal Demodulada');
 
 %% Filtro Acoplado
 filtro_Y1 = filter(pulso,1,senal_Y1);
 filtro_Y2 = filter(pulso,1,senal_Y2);
-figure(12)
+figure(19)
 plot(filtro_Y1,filtro_Y2)
+
 %% Demodulacion Banda Base
 Y1 = downsample(filtro_Y1,mps +1);
 Y2 = downsample(filtro_Y2,mps +1);
@@ -215,10 +295,21 @@ title('Diagrama del ojo señal rx')
 xlim([0,0.1]);
 scatterplot(Y1+1j*Y2),title('simbolos recibidos')
 
-% Demapeo
+%% Demapeo
 num_simbolos_rx = numel(Y1);% Numero de sumbolor recibidos
 simbolos_binarios = {'000', '001', '010', '011', '100', '101', '110', '111'};
 bits_demapeados = cell(1, num_simbolos_rx);% Vector para bits demapeados
+
+diccionario_8PSK = {
+    '000', 1 + 0j;     % S1
+    '001', 0.707 + 0.707j;  % S2
+    '010', 0 + 1j;     % S3
+    '011', -0.707 + 0.707j;  % S4
+    '100', -1 + 0j;     % S5
+    '101', -0.707 - 0.707j; % S6
+    '110', 0 - 1j;     % S7
+    '111', 0.707 - 0.707j; % S8
+    };
 
 % Para cada símbolo recibido se obtiene el simbolo complejo
 for i = 1:num_simbolos_rx
@@ -241,19 +332,17 @@ secuencia_bits = double(secuencia_binaria) - 48;
 
 %% Recuperacion de la imagen 
 alto = 200;
-ancho = floor(numel(secuencia_bits) / alto);
+ancho = numel(secuencia_bits) / alto;
+ancho = floor(ancho);
 alto = numel(secuencia_bits) / ancho;
+matriz_bits = reshape(secuencia_bits, alto, ancho);
+valores_pixeles = matriz_bits * 255;  %1 representa el blanco y 0 representa el negro
+imagen_escala_grises = uint8(valores_pixeles);  % Convertir a tipo de datos uint8 para crear la imagen
 
-matriz_bits = reshape(secuencia_bits, alto, ancho);% De secuencia a matriz
-valores_pixeles = matriz_bits * 255;  % De matriz de bits a matriz de pixeles
-imagen_escala_grises = uint8(valores_pixeles);  % Imagen en escala de grises
-
-%Grafica
+% Mostrar la imagen
+figure(21)
 imshow(imagen_escala_grises);
-title('Imagen Recuperada');
-
-
-
+title('Imagen generada a partir de la secuencia de bits');
 
 
 %% Funciones, etc
