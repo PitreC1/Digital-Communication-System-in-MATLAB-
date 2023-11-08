@@ -15,9 +15,20 @@ img_Binaria = im2bw(img_Gray, level);
 secuencia = reshape(img_Binaria, 1, []);
 
 %Grafica de la Imagen Binarizada
-figure(1),
+figure,
 imshow(img_Binaria);
 title('Imagen Binarizada ');
+
+% Espectro de la Señal de entrada
+Timagen=size(secuencia,ndims(secuencia));   %Image period.
+fi=1/Timagen; 
+[X,f] = FourierT(secuencia,fi);
+figure,
+plot(f, X);
+xlabel('Frecuencia (Hz)');
+ylabel('Amplitud');
+title('Espectro de la señal de Entrada');
+
 
 %% MODULACION EN BANDA BASE 16 QAM
 %Parametros de la modulacion 
@@ -57,6 +68,15 @@ S2=imag(secuencia_Simbolos);
 %Grafica de los simbolos Transmitidos
 scatterplot(secuencia_Simbolos), title('simbolos transmitidos')
 
+%Grafica del Espectro en Modulacion QAM
+fi = 2*5*10^4;
+[X,f] = FourierT(secuencia_Simbolos,fi);
+figure,
+plot(f, X);
+xlabel('Frecuencia (Hz)');
+ylabel('Amplitud');
+title('Espectro Modulacion QAM');
+
 %% PULSO CONFORMADOR
 % Parámetros del pulso conformador
 rolloff = 0.5; %factor de roll-off
@@ -73,10 +93,66 @@ S2=[S2 zeros(1,2*span)];
 %Sobremuestreo
 X1 = upsample(S1, mps);
 X2= upsample(S2, mps);
+X3= upsample(S1+j*S2,mps);
 
 %Pulso Conformados
 pulsos_conf_real = filter(pulso,1,X1);
 pulsos_conf_img = filter(pulso,1,X2);
+pulsos_conformados=filter(pulso,1,X3);
+
+% Grafica del pulso conformador parte real 
+figure,
+subplot(3,1,1)
+stem(pulso);
+title('Pulsos Conformador');
+xlabel('Muestras');
+ylabel('Amplitud');
+
+subplot(3,1,2)
+stem(X1)
+title('Secuencia sobremuestreada real');
+xlabel('Muestras');
+xlim([0,33]);
+ylabel('Amplitud');
+
+subplot(3,1,3)
+stem(pulsos_conf_real);
+title('Señal Pulsos conformados reales');
+xlabel('Muestras');
+xlim([0,33]);
+ylabel('Amplitud');
+
+% Grafica del pulso conformador parte imaginaria 
+figure,
+subplot(3,1,1)
+stem(pulso);
+title('Pulsos Conformador');
+xlabel('Muestras');
+ylabel('Amplitud');
+
+subplot(3,1,2)
+stem(X2)
+title('Secuencia sobremuestreada imaginaria');
+xlabel('Muestras');
+xlim([0,33]);
+ylabel('Amplitud');
+
+subplot(3,1,3)
+stem(pulsos_conf_img);
+title('Señal Pulsos conformados imaginarios');
+xlabel('Muestras');
+xlim([0,33]);
+ylabel('Amplitud');
+
+% ESPECTRO DE LA SEÑAL A LA SALIDA DEL PULSO CONFORMADOR
+
+fi = (2*10^4)/3;
+[XmBB,f] = FourierT(pulsos_conformados,fi);
+figure,
+plot(f, XmBB);
+xlabel('Frecuencia (Hz)');
+ylabel('Amplitud');
+title('Espectro de la señal a la salida del pulso conformador');
 
 %% Modulacion Pasa Banda 
 %Parametros de la modulacion
@@ -95,11 +171,19 @@ senal_real = sqrt(2)*pulsos_conf_real.*cos(2*pi*fc.*t);
 senal_img = -sqrt(2)*pulsos_conf_img.*sin(2*pi*fc.*t);
 senal_tx = senal_real + senal_img; 
 
+% ESPECTRO DE LA SEÑAL MODULADA EN PASA BANDA
+fi = (5*10^4)/3;
+[XmBB,f] = FourierT(senal_tx,fi);
+figure,
+plot(f, XmBB);
+xlabel('Frecuencia (Hz)');
+ylabel('Amplitud');
+title('Espectro de la señal Modulada en Pasa Banda');
+
+
+%% Canal AWGN
 M=16; %Orden de Modulación
 EbNoVec = (0:10);
-
-% Inicializa un vector para almacenar las BER estimadas en cada iteración
-%BER = zeros(size(EbNoVec));
 
 % Inicializa vectores para bits transmitidos y recibidos
 
@@ -122,12 +206,59 @@ t1 = 10; % Desplazamiento en el tiempo (segundos)
 Y_Multitrayecto_1 = alpha1*interp1(t, Y, t - t1, 'linear', 0); % Interpolación lineal
 Y_Canal = Y + Y_Multitrayecto_1;
 
+if i1 == length(EbNoVec)
+        figure,
+        subplot(2,1,1);
+        plot(Y);
+        title('Señal Original x(t)');
+        xlabel('Tiempo (s)');
+        xlim([0,300]);
+        ylabel('Amplitud');
+    
+        subplot(2,1,2);
+        plot(Y_Multitrayecto_1,'r');
+        title('Señal Trayecto 1');
+        xlabel('Tiempo (s)');
+        xlim([0,300]);
+        ylabel('Amplitud');
+end
+if i1 == length(EbNoVec)
+        figure,
+        plot(Y_Canal)
+        xlim([0, 300]);
+        title('Señal a la Salida del Canal');
 
+        % ESPECTRO DE LA SEÑAL A LA SALIDA DEL CANAL
+        [YAWGNM,f] = FourierT(Y_Canal,fi);
+        figure(11),
+        plot(f, YAWGNM);
+        xlabel('Frecuencia (Hz)');
+        ylabel('Amplitud');
+        title('Espectro de la señal a la Salida del Canal');
+end
 
 %% Ecualizador
 Y_Ecualizado1 = (Y_Canal) - (alpha1*interp1(t, Y_Canal, t - t1, 'linear', 0)+(alpha1^2)*interp1(t, Y_Canal, t - 2*t1, 'linear', 0));
 Y_Ecualizado2 = Y_Ecualizado1 + (alpha1^2)*interp1(t, Y_Canal, t - 2*t1, 'linear', 0)+(alpha1^3)*interp1(t, Y_Canal, t - 3*t1, 'linear', 0);
-    
+ if i1 == length(EbNoVec)
+        figure,
+        subplot(2,1,1);
+        plot(Y)
+        xlim([mps*5 mps*30])
+        title('Señal con AWGN');
+        subplot(2,1,2);
+        plot(Y_Ecualizado2)
+        xlim([mps*5 mps*30])
+        title('Señal Ecualizada');
+
+        % ESPECTRO DE LA SEÑAL A LA SALIDA DEL ECUALIZADOR
+        [YAWGNM,f] = FourierT(Y_Ecualizado2,fi);
+        figure,
+        plot(f, YAWGNM);
+        xlabel('Frecuencia (Hz)');
+        ylabel('Amplitud');
+        title('Espectro de la señal a la Salida del Canal');
+end    
 %% Demodulacion Pasa Banda
 senal_Y1 = sqrt(2)*Y_Ecualizado2.*cos(2*pi*fc.*t);
 senal_Y2 = -sqrt(2)*Y_Ecualizado2.*sin(2*pi*fc.*t);
@@ -136,13 +267,23 @@ senal_YDM = senal_Y1 + senal_Y2;
 %% Filtro Acoplado
 filtro_Y1 = filter(pulso,1,senal_Y1);
 filtro_Y2 = filter(pulso,1,senal_Y2);
-
+if i1 == length(EbNoVec)
+        figure,
+        plot(filtro_Y1,filtro_Y2)
+end
 %% Demodulacion Banda Base
 Y1 = downsample(filtro_Y1,mps);
 Y2 = downsample(filtro_Y2,mps);
+if i1 == length(EbNoVec)
+        %Graficas del diagrama de ojo 
+        eyediagram([filtro_Y1(5000:55000)' filtro_Y2(5000:55000)'],4*fs)
+        title('Diagrama del ojo señal rx')
+
+        %Grafica simbolos Recibidos
+        scatterplot(Y1+1j*Y2),title('simbolos recibidos en Demodulacion')
+end
 
 %% De-mapeo- Criterio de la Distancia Minima
-
 T = Mpam - 1; % Número de umbrales de decisión
 Tes = zeros(1, T);
 for a = 1:T
@@ -231,6 +372,9 @@ S_estimados=S_estimados(2*span+1:length(S_estimados));
 secuencia_bits = demapeo_Simbolo(S_estimados);
 
 %Grafica de los simbolos demapeados
+if i1 == length(EbNoVec)
+  scatterplot(S_estimados),title('simbolos recibidos después del Demapeo')       
+end
 
 %% Recuperacion de la Imagen
 secuencia_bits=double(secuencia_bits)-48;
@@ -246,16 +390,17 @@ imagen_escala_grises = uint8(valores_pixeles);  % Convertir a tipo de datos uint
 bits_transmitidos = double(secuencia'); % Secuencia de bits transmitidos
 bits_recibidos = double(secuencia_bits'); % Secuencia de bits recibidos
 bits_incorrectos = sum(bits_transmitidos ~= bits_recibidos);
-[~,BER(i1)]=symerr(bits_transmitidos,bits_recibidos);    
+[~,BER(i1)]=symerr(bits_transmitidos,bits_recibidos);   
+
 end    
 
 % Grafica de la Imagen Recuperada
-figure(15)
+figure,
 imshow(imagen_escala_grises);
 title('Imagen generada a partir de la secuencia de bits');
 %% BER Teorica vs Estimada
 berTheory = berawgn(EbNoVec,'qam',M);
-figure;
+figure,
 semilogy(EbNoVec, berTheory, 'b-'); % Curva de BER teórica en azul
 hold on;
 semilogy(EbNoVec, BER, 'r-*'); % Curva de BER estimada en rojo con asteriscos
@@ -265,8 +410,7 @@ xlabel('Eb/No (dB)');
 ylabel('Bit Error Rate');
 title('Comparación de BER Teórica y Estimada');
 
-%% Funcion para determinar el Espectro
-
+%% Funciones
 function mapeo = mapeo_Simbolos(grupo_Bits)
     diccionario = {
         '0000', -3 + 3i;
